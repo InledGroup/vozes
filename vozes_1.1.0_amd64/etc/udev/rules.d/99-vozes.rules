@@ -1,0 +1,8 @@
+# Allow users in 'input' group to read and write to /dev/uinput
+KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+
+# Allow users in 'input' group to read from /dev/input/event*
+SUBSYSTEM=="input", KERNEL=="event*", MODE="0660", GROUP="input"
+
+# Specifically tag Vozes Virtual Keyboard as a keyboard for Wayland compositors
+SUBSYSTEM=="input", ATTRS{name}=="Vozes-Virtual-Keyboard", ENV{ID_INPUT}="1", ENV{ID_INPUT_KEYBOARD}="1", TAG+="uaccess"
