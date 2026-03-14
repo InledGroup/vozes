@@ -23,13 +23,23 @@
 ## 🛠️ Installation
 
 ### 1. Download the latest release
-Grab the `.deb` package for your architecture from the [GitHub Actions](https://github.com/InledGroup/vozes/actions) or Releases page.
+Grab the `.deb` package for your architecture from the releases section.  
+> Note that the .deb contained in every release are built in different devices such as Proxmox or Ubuntu and the experience may be different in some architectures.
 
 ### 2. Install using APT
 ```bash
 sudo apt install ./vozes_1.5.0_amd64.deb
 ```
 *Note: This will automatically set up a dedicated Python virtual environment and system dependencies to keep your OS clean.*
+
+### Known errors:  
+
+ #### PyAudio:    
+ Run this
+ ```bash
+sudo apt-get install portaudio19-dev python3-dev
+ ```
+
 
 ### 3. Permissions (First time only)
 To allow the app to listen to global hotkeys and type on your behalf, ensure your user is in the `input` group:
