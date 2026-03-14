@@ -3,7 +3,7 @@ set -e
 
 # Configuration
 APP_NAME="vozes"
-VERSION="1.5.0"
+VERSION="1.1.0"
 # Detect architecture automatically
 ARCH=$(dpkg --print-architecture)
 DEB_NAME="${APP_NAME}_${VERSION}_${ARCH}"
@@ -34,7 +34,10 @@ if [ ! -f "$WHISPER_SRC" ]; then
     echo "ERROR: whisper-cli binary not found at $WHISPER_SRC. Please compile it first."
     exit 1
 fi
-cp "$WHISPER_SRC" "$BUILD_DIR/usr/bin/whisper-cli"
+cp "$WHISPER_SRC" "$BUILD_DIR/usr/share/vozes/bin/whisper-cli"
+# Create a symlink in /usr/bin for convenience
+mkdir -p "$BUILD_DIR/usr/bin"
+ln -s /usr/share/vozes/bin/whisper-cli "$BUILD_DIR/usr/bin/whisper-cli"
 
 # 4. Copy Source Code, Data and Icon
 cp -r src/* "$BUILD_DIR/usr/share/vozes/src/"
@@ -62,9 +65,11 @@ EOF
 cat <<EOF > "$BUILD_DIR/usr/bin/vozes"
 #!/bin/bash
 # Run from the installation directory
-export PYTHONPATH=/usr/share/vozes/src:\$PYTHONPATH
+export PYTHONPATH=/usr/share/vozes:/usr/share/vozes/src:\$PYTHONPATH
 # Path to the shared virtual environment created during postinst
-source /usr/share/vozes/venv/bin/activate
+if [ -f "/usr/share/vozes/venv/bin/activate" ]; then
+    source /usr/share/vozes/venv/bin/activate
+fi
 exec python3 /usr/share/vozes/src/main.py "\$@"
 EOF
 chmod +x "$BUILD_DIR/usr/bin/vozes"
@@ -96,7 +101,13 @@ cd /usr/share/vozes
 python3 -m venv venv --system-site-packages
 source venv/bin/activate
 pip install --upgrade pip
+# Install requirements (numpy >= 2.1.0 for Python 3.13)
 pip install -r requirements.txt
+# Special handling for openwakeword on Python 3.13 / ARM64
+pip install openwakeword==0.6.0 --no-deps
+# Pre-download models as root so they are available for all users
+echo "Downloading wake word models..."
+python3 -c "from openwakeword.utils import download_models; download_models()"
 
 # 2. Reload udev rules
 echo "Reloading udev rules..."

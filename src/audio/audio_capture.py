@@ -32,26 +32,45 @@ class AudioController:
         
         # In 0.6.0 models might not be downloaded by default or accessed differently
         try:
-            # Try to get the model path, if it fails we might need to download it
-            # Using the recommended way for 0.6.0 if available, or fallback to manual path
             import os
             base_dir = os.path.dirname(openwakeword.__file__)
             jarvis_path = os.path.join(base_dir, "resources", "models", "hey_jarvis.onnx")
             
+            # Fallback path in user home for models if they can't be found/downloaded in system
+            user_models_dir = os.path.expanduser("~/.local/share/vozes/models")
+            user_jarvis_path = os.path.join(user_models_dir, "hey_jarvis.onnx")
+
             if not os.path.exists(jarvis_path):
-                # Try .tflite as well
-                jarvis_path_tflite = os.path.join(base_dir, "resources", "models", "hey_jarvis.tflite")
-                if os.path.exists(jarvis_path_tflite):
-                    jarvis_path = jarvis_path_tflite
+                if os.path.exists(user_jarvis_path):
+                    jarvis_path = user_jarvis_path
                 else:
-                    print("Downloading openWakeWord models...")
-                    from openwakeword.utils import download_models
-                    download_models()
-            
-            self.oww_model = Model(wakeword_model_paths=[jarvis_path])
+                    try:
+                        print("Downloading openWakeWord models...")
+                        from openwakeword.utils import download_models
+                        # Try system first, if PermissionError, try user dir
+                        try:
+                            download_models()
+                        except PermissionError:
+                            print(f"No permission to write in system venv. Downloading to {user_models_dir}...")
+                            os.makedirs(user_models_dir, exist_ok=True)
+                            # Actually we can't easily tell download_models where to put them, 
+                            # so we might just use a generic 'hey_jarvis' string and Model will handle it 
+                            # if it can find it in common paths.
+                            # But better to just try downloading them to the user dir if possible.
+                            download_models(target_directory=user_models_dir)
+                            jarvis_path = user_jarvis_path
+                    except Exception as download_err:
+                        print(f"Failed to download models: {download_err}")
+
+            # Ensure we are using .onnx path specifically to avoid tflite-runtime issues
+            if os.path.exists(jarvis_path):
+                self.oww_model = Model(wakeword_model_paths=[jarvis_path])
+            else:
+                # Fallback to generic name if everything else fails
+                self.oww_model = Model(wakeword_models=["hey_jarvis"])
         except Exception as e:
             print(f"Error initializing OpenWakeWord: {e}")
-            # Last resort: let it try to find models itself
+            # As a last resort, this will try to find any available 'hey_jarvis' model
             self.oww_model = Model(wakeword_models=["hey_jarvis"])
             
         self._thread = None
