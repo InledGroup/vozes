@@ -59,7 +59,7 @@ class VozesController:
         self.update_gui_status("Escuchando...")
         
     def on_hotkey(self):
-        print("Hotkey callback")
+        print("Hotkey detected in VozesController!")
         if not self.audio.is_recording:
             self.audio.start_recording()
             self.update_gui_status("Escuchando...")

@@ -19,24 +19,14 @@ class WhisperRunner:
             self.bin_path,
             "-m", self.model_path,
             "-f", wav_path,
-            "--output-txt",
             "-nt" # No timestamps
         ]
         
         try:
             print(f"Executing whisper command: {' '.join(command)}")
-            # whisper.cpp usually outputs to stdout and also to a file if requested
+            # whisper.cpp outputs transcription to stdout
             result = subprocess.run(command, capture_output=True, text=True, check=True)
-            
-            # Depending on whisper.cpp version, output might be in stdout or a generated .txt file
-            txt_file = f"{wav_path}.txt"
-            if os.path.exists(txt_file):
-                with open(txt_file, "r", encoding="utf-8") as f:
-                    text = f.read().strip()
-                os.remove(txt_file)
-                return text
-            else:
-                return self._parse_stdout(result.stdout)
+            return self._parse_stdout(result.stdout)
                 
         except subprocess.CalledProcessError as e:
             print(f"Whisper process failed with exit code {e.returncode}")
@@ -51,12 +41,20 @@ class WhisperRunner:
         """ Extract text from standard output. """
         lines = []
         for line in stdout.splitlines():
-            # Basic parsing to remove timestamps if they are still printed e.g. [00:00:00.000 --> 00:00:05.000] text
+            line = line.strip()
+            if not line: continue
+            
+            # Ignore common whisper.cpp system/debug output
+            if any(x in line for x in ["whisper_init", "whisper_full", "system_info", "WARNING", "error"]):
+                continue
+            
+            # Remove timestamps if present [00:00:00.000 --> 00:00:05.000]
             if line.startswith("[") and "-->" in line:
                 parts = line.split("]", 1)
                 if len(parts) > 1:
-                    lines.append(parts[1].strip())
-            elif not line.startswith("["):
-                 # if there are no timestamps
-                 lines.append(line.strip())
+                    line = parts[1].strip()
+            
+            if line:
+                lines.append(line)
+        
         return " ".join(lines).strip()

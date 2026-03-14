@@ -15,16 +15,20 @@ SUBSYSTEM=="input", KERNEL=="event*", MODE="0660", GROUP="input"
     
     # We create a temporary script to do all root actions at once
     script_path = "/tmp/vozes_udev_setup.sh"
+    real_user = os.environ.get('USER') or os.getlogin()
+    
     with open(script_path, "w") as f:
         f.write(f"#!/bin/bash\n")
         f.write(f"echo '{rules_content}' > /etc/udev/rules.d/99-vozes.rules\n")
         f.write(f"udevadm control --reload-rules\n")
         f.write(f"udevadm trigger\n")
         f.write(f"getent group input >/dev/null || groupadd -r input\n")
-        f.write(f"usermod -aG input $USER\n")
-        # Temporary chmod for immediate use in current session
-        f.write(f"chmod 666 /dev/uinput\n")
-        f.write(f"chmod 666 /dev/input/event*\n")
+        f.write(f"usermod -aG input {real_user}\n")
+        # Forzar permisos para la sesión actual
+        f.write(f"chown {real_user}:input /dev/uinput || true\n")
+        f.write(f"chmod 666 /dev/uinput || true\n")
+        f.write(f"chmod 666 /dev/input/event* || true\n")
+        f.write(f"echo 'Permisos aplicados para {real_user}'\n")
         
     os.chmod(script_path, 0o755)
     

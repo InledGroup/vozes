@@ -21,14 +21,14 @@ class ConfigManager:
         if not self.config.get("whisper_bin_path"):
             project_root = Path(__file__).parent.parent
             search_paths = [
-                project_root / "bin" / "whisper.cpp" / "build" / "bin" / "main",
                 project_root / "bin" / "whisper.cpp" / "build" / "bin" / "whisper-cli",
-                project_root / "bin" / "whisper.cpp" / "main",
                 project_root / "bin" / "whisper.cpp" / "whisper-cli",
-                Path.cwd() / "bin" / "whisper.cpp" / "build" / "bin" / "main",
+                project_root / "bin" / "whisper.cpp" / "build" / "bin" / "main",
+                project_root / "bin" / "whisper.cpp" / "main",
                 Path.cwd() / "bin" / "whisper.cpp" / "build" / "bin" / "whisper-cli",
-                Path.cwd() / "bin" / "whisper.cpp" / "main",
                 Path.cwd() / "bin" / "whisper.cpp" / "whisper-cli",
+                Path.cwd() / "bin" / "whisper.cpp" / "build" / "bin" / "main",
+                Path.cwd() / "bin" / "whisper.cpp" / "main",
                 Path("/usr/bin/whisper-cli"),
                 Path("/usr/bin/whisper-main"),
                 Path("/usr/local/bin/whisper-cli")

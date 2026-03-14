@@ -63,7 +63,11 @@ class AudioController:
 
     def _listen_loop(self):
         silence_frames = 0
-        max_silence_frames = int(self.RATE / self.CHUNK * 2.5) # 2.5 seconds of silence
+        # 2.0 seconds of silence to stop
+        max_silence_frames = int(self.RATE / self.CHUNK * 2.0)
+        # Max recording duration: 30 seconds
+        max_recording_frames = int(self.RATE / self.CHUNK * 30)
+        recording_count = 0
         
         while not self._stop_event.is_set():
             try:
@@ -74,9 +78,9 @@ class AudioController:
 
             if self.is_recording:
                 self.frames.append(data)
+                recording_count += 1
+                
                 # Check for silence using VAD
-                # webrtcvad expects 10, 20, or 30 ms chunks
-                # We have 80ms chunk, split it for VAD
                 is_speech = False
                 frame_length = int(self.RATE * 0.02) # 20ms
                 for i in range(0, len(data), frame_length * 2):
@@ -91,19 +95,29 @@ class AudioController:
                 else:
                     silence_frames = 0
                     
-                if silence_frames > max_silence_frames:
-                    # Silence detected, stop recording and trigger callback
+                if recording_count % 20 == 0:
+                    print(f"Recording... {recording_count} frames, silence_frames: {silence_frames}/{max_silence_frames}")
+
+                # Force stop if silence detected or too long
+                if silence_frames > max_silence_frames or recording_count > max_recording_frames:
+                    if silence_frames > max_silence_frames:
+                        print(f"Silence detected ({silence_frames} frames). Stopping.")
+                    else:
+                        print("Max duration reached. Stopping.")
+                        
                     self.is_recording = False
                     if self.callback_on_silence:
                         self.callback_on_silence("/tmp/vozes_record.wav")
             else:
+                recording_count = 0
+                silence_frames = 0
                 # Listen for wake word
                 audio_data = np.frombuffer(data, dtype=np.int16)
                 prediction = self.oww_model.predict(audio_data)
-                # Check if any wakeword score > threshold (e.g., 0.5)
-                for mdl in self.oww_model.models.keys():
-                    if prediction[mdl] > 0.5:
-                        print("Wake word detected!")
+                # Check if any wakeword score > threshold
+                for mdl, score in prediction.items():
+                    if score > 0.4: # Slightly lower threshold for Jarvis
+                        print(f"Wake word detected! Model: {mdl}, Score: {score}")
                         self.start_recording()
                         if self.callback_on_wake:
                             self.callback_on_wake()
