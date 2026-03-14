@@ -17,8 +17,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Set up QEMU
         if: matrix.arch == 'arm64'
@@ -28,7 +26,12 @@ jobs:
         if: matrix.arch == 'amd64'
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y build-essential cmake git dpkg-dev
+          sudo apt-get install -y build-essential cmake git dpkg-dev libsdl2-dev ca-certificates
+          
+          # Ensure bin directory exists and clone whisper.cpp
+          mkdir -p bin
+          rm -rf bin/whisper.cpp
+          git clone --depth 1 --branch v1.8.2 https://github.com/ggerganov/whisper.cpp.git bin/whisper.cpp
           
           # Build whisper.cpp
           cd bin/whisper.cpp
@@ -50,8 +53,13 @@ jobs:
             ARCH: arm64
           install: |
             apt-get update -y
-            apt-get install -y build-essential cmake git dpkg-dev
+            apt-get install -y build-essential cmake git dpkg-dev libsdl2-dev ca-certificates
           run: |
+            # Ensure bin directory exists and clone whisper.cpp
+            mkdir -p bin
+            rm -rf bin/whisper.cpp
+            git clone --depth 1 --branch v1.8.2 https://github.com/ggerganov/whisper.cpp.git bin/whisper.cpp
+            
             # Build whisper.cpp
             cd bin/whisper.cpp
             mkdir -p build && cd build
