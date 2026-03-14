@@ -23,18 +23,19 @@ class InputManager:
                 
                 # Filtrar solo teclas reales (0-248) para evitar Errno 22
                 # KEY_RESERVED=0, KEY_MIN_INTERESTING=1, KEY_MAX=0x2ff
-                # Usamos un rango seguro de teclas de teclado estándar
+                # Supported keys for a standard keyboard
                 supported_keys = [k for k in range(1, 248)]
-                
+
                 cap = {
-                    ecodes.EV_KEY: supported_keys
+                    ecodes.EV_KEY: supported_keys,
+                    ecodes.EV_REP: 1 # Required by some compositors
                 }
-                
+
                 # Using BUS_USB and dummy IDs to look more like a real hardware device
-                self.uinput = UInput(cap, name="Vozes-Virtual-Keyboard",
-                                    bustype=ecodes.BUS_USB,
-                                    vendor=0x1234,
-                                    product=0x5678,
+                self.uinput = UInput(cap, name="Vozes-Virtual-Keyboard", 
+                                    bustype=ecodes.BUS_USB, 
+                                    vendor=0x1234, 
+                                    product=0x5678, 
                                     version=1)
                 print("Escritura virtual (UInput) inicializada correctamente.")
                 return
@@ -123,39 +124,70 @@ class InputManager:
         print(f"Typing text: '{text}'")
         
         # Give a small delay to make sure the hotkey is released 
-        # and focus is back on the application
         time.sleep(0.3)
         
+        # Extended character map
         char_map = {
             ' ': ecodes.KEY_SPACE, '\n': ecodes.KEY_ENTER, '.': ecodes.KEY_DOT, 
             ',': ecodes.KEY_COMMA, '-': ecodes.KEY_MINUS, '?': ecodes.KEY_SLASH,
-            '!': ecodes.KEY_1, '(': ecodes.KEY_9, ')': ecodes.KEY_0
+            '!': ecodes.KEY_1, '(': ecodes.KEY_9, ')': ecodes.KEY_0,
+            ':': ecodes.KEY_SEMICOLON, ';': ecodes.KEY_SEMICOLON,
+            '"': ecodes.KEY_APOSTROPHE, "'": ecodes.KEY_APOSTROPHE,
+            '/': ecodes.KEY_SLASH, '\\': ecodes.KEY_BACKSLASH,
+            '[': ecodes.KEY_LEFTBRACE, ']': ecodes.KEY_RIGHTBRACE,
+            '{': ecodes.KEY_LEFTBRACE, '}': ecodes.KEY_RIGHTBRACE,
+            '@': ecodes.KEY_2, '#': ecodes.KEY_3, '$': ecodes.KEY_4,
+            '%': ecodes.KEY_5, '^': ecodes.KEY_6, '&': ecodes.KEY_7,
+            '*': ecodes.KEY_8, '+': ecodes.KEY_EQUAL, '=': ecodes.KEY_EQUAL,
+            '_': ecodes.KEY_MINUS, '<': ecodes.KEY_COMMA, '>': ecodes.KEY_DOT,
         }
         
+        # Basic Spanish accent normalization to base characters
+        # Handling dead keys via uinput is extremely layout-dependent,
+        # so we normalize to ensure the text is at least typed.
+        import unicodedata
+        def normalize_char(c):
+            if ord(c) < 128: return c
+            return "".join(x for x in unicodedata.normalize('NFKD', c) if unicodedata.category(x) != 'Mn')
+
         for char in text:
+            # Try original char first
+            target = char
             code = None
             shift = False
-            if char.islower(): code = getattr(ecodes, f"KEY_{char.upper()}", None)
-            elif char.isupper(): code = getattr(ecodes, f"KEY_{char}", None); shift = True
-            elif char in char_map: 
-                code = char_map[char]
-                if char in '?!()': shift = True
-            elif char.isdigit(): code = getattr(ecodes, f"KEY_{char}", None)
+            
+            if target.islower(): code = getattr(ecodes, f"KEY_{target.upper()}", None)
+            elif target.isupper(): code = getattr(ecodes, f"KEY_{target}", None); shift = True
+            elif target in char_map: 
+                code = char_map[target]
+                # Common shifted symbols in US layout (which uinput defaults to)
+                if target in '?!()@#$%^&*_+{}|:\"<>': shift = True
+            elif target.isdigit(): code = getattr(ecodes, f"KEY_{target}", None)
+            
+            # If not found, try normalized version
+            if not code:
+                normalized = normalize_char(target)
+                if normalized != target:
+                    target = normalized
+                    if target.islower(): code = getattr(ecodes, f"KEY_{target.upper()}", None)
+                    elif target.isupper(): code = getattr(ecodes, f"KEY_{target}", None); shift = True
+                    elif target in char_map: code = char_map[target]
+                    elif target.isdigit(): code = getattr(ecodes, f"KEY_{target}", None)
 
             if code:
                 try:
                     if shift: self.uinput.write(ecodes.EV_KEY, ecodes.KEY_LEFTSHIFT, 1)
                     self.uinput.write(ecodes.EV_KEY, code, 1)
                     self.uinput.syn()
-                    time.sleep(0.02)
+                    time.sleep(0.01)
                     self.uinput.write(ecodes.EV_KEY, code, 0)
                     if shift: self.uinput.write(ecodes.EV_KEY, ecodes.KEY_LEFTSHIFT, 0)
                     self.uinput.syn()
-                    time.sleep(0.02)
+                    time.sleep(0.01)
                 except Exception as e:
                     print(f"Error typing char '{char}': {e}")
             else:
-                print(f"Char '{char}' not found in key map")
+                print(f"Char '{char}' (normalized: '{normalize_char(char)}') not found in key map")
         
         # Espacio final para separar dictados
         try:

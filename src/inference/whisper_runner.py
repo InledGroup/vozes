@@ -50,6 +50,10 @@ class WhisperRunner:
             if any(x in line for x in ["whisper_init", "whisper_full", "system_info", "WARNING", "error"]):
                 continue
             
+            # Ignore hallucinations or ambient sounds in brackets like [MÚSICA], [LAUGHTER], etc.
+            if line.startswith("[") and line.endswith("]") and "-->" not in line:
+                continue
+            
             # Remove timestamps if present [00:00:00.000 --> 00:00:05.000]
             if line.startswith("[") and "-->" in line:
                 parts = line.split("]", 1)
