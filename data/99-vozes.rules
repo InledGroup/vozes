@@ -1,0 +1,5 @@
+# Allow users in 'input' group to read and write to /dev/uinput
+KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+
+# Allow users in 'input' group to read from /dev/input/event*
+SUBSYSTEM=="input", KERNEL=="event*", MODE="0660", GROUP="input"

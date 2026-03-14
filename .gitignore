@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# Project specific
+bin/
+data/icons/
+*.deb
+*.txt
+*.wav
+/tmp/vozes*
+/home/jaime/Documentos/vozes/vozes_*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

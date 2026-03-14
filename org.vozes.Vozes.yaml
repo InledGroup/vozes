@@ -1,0 +1,36 @@
+app-id: org.vozes.Vozes
+runtime: org.gnome.Platform
+runtime-version: '45'
+sdk: org.gnome.Sdk
+command: vozes
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=all
+  - --filesystem=home
+  - --socket=pulseaudio
+modules:
+  - name: whisper-cpp
+    buildsystem: cmake-ninja
+    sources:
+      - type: git
+        url: https://github.com/ggerganov/whisper.cpp.git
+        branch: master
+
+  - name: vozes
+    buildsystem: simple
+    build-commands:
+      - install -D -m 755 vozes.sh /app/bin/vozes
+      - mkdir -p /app/share/vozes
+      - cp -r src /app/share/vozes/
+      - pip3 install --prefix=/app -r requirements.txt
+    sources:
+      - type: dir
+        path: .
+      - type: script
+        dest-filename: vozes.sh
+        commands:
+          - export PYTHONPATH=/app/share/vozes/src:$PYTHONPATH
+          - exec python3 /app/share/vozes/src/main.py "$@"
