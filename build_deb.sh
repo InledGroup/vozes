@@ -30,10 +30,34 @@ mkdir -p "$BUILD_DIR/etc/udev/rules.d"
 
 # 3. Compile/Ensure Whisper binary exists
 WHISPER_SRC="bin/whisper.cpp/build/bin/whisper-cli"
+
 if [ ! -f "$WHISPER_SRC" ]; then
-    echo "ERROR: whisper-cli binary not found at $WHISPER_SRC. Please compile it first."
-    exit 1
+    echo "Whisper binary not found. Attempting to clone and compile automatically..."
+    
+    # Ensure dependencies for compilation are installed (requires sudo/pkexec if missing)
+    # Note: We assume common build tools like git, cmake, and g++ are present or the user will be prompted by the system.
+    
+    mkdir -p bin
+    if [ ! -d "bin/whisper.cpp" ]; then
+        echo "Cloning whisper.cpp repository..."
+        git clone --depth 1 --branch v1.8.2 https://github.com/ggerganov/whisper.cpp.git bin/whisper.cpp
+    fi
+
+    echo "Compiling whisper.cpp (this may take a few minutes)..."
+    cd bin/whisper.cpp
+    mkdir -p build
+    cd build
+    cmake .. -DWHISPER_SDL2=OFF -DWHISPER_ALL_EXTRAS=OFF -DWHISPER_BUILD_EXAMPLES=ON
+    make -j$(nproc) whisper-cli
+    cd ../../../
+    
+    if [ ! -f "$WHISPER_SRC" ]; then
+        echo "ERROR: Failed to compile whisper-cli. Please install build-essential, cmake and git."
+        exit 1
+    fi
+    echo "Compilation successful!"
 fi
+
 # Strip the binary to reduce size
 strip "$WHISPER_SRC"
 cp "$WHISPER_SRC" "$BUILD_DIR/usr/share/vozes/bin/whisper-cli"
