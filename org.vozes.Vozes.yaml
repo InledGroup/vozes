@@ -48,15 +48,15 @@ modules:
       # We point pip to the portaudio we just built in /app
       - export C_INCLUDE_PATH=/app/include:$C_INCLUDE_PATH
       - export LIBRARY_PATH=/app/lib:$LIBRARY_PATH
-      - pip3 install --prefix=/app -r requirements.txt
-      - pip3 install --prefix=/app openwakeword==0.6.0 --no-deps
+      - pip3 install --prefix=/app --ignore-installed -r requirements.txt
+      - pip3 install --prefix=/app --ignore-installed openwakeword==0.6.0 --no-deps
       - install -D -m 755 vozes.sh /app/bin/vozes
       - mkdir -p /app/share/vozes
       - cp -r src /app/share/vozes/
       - mkdir -p /app/share/vozes/data
       - cp vozes.png /app/share/vozes/data/
       - install -D -m 644 data/org.vozes.Vozes.desktop /app/share/applications/org.vozes.Vozes.desktop
-      - install -D -m 644 vozes.png /app/share/icons/hicolor/scalable/apps/org.vozes.Vozes.png
+      - install -D -m 644 data/org.vozes.Vozes.png /app/share/icons/hicolor/512x512/apps/org.vozes.Vozes.png
       - install -D -m 644 data/org.vozes.Vozes.metainfo.xml /app/share/metainfo/org.vozes.Vozes.metainfo.xml
     sources:
       - type: dir

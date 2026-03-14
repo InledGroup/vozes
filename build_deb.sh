@@ -3,9 +3,9 @@ set -e
 
 # Configuration
 APP_NAME="vozes"
-VERSION="1.1.0"
+VERSION="${VERSION:-1.5.0}"
 # Detect architecture automatically
-ARCH=$(dpkg --print-architecture)
+ARCH="${ARCH:-$(dpkg --print-architecture)}"
 DEB_NAME="${APP_NAME}_${VERSION}_${ARCH}"
 BUILD_DIR="$(pwd)/$DEB_NAME"
 
@@ -34,6 +34,8 @@ if [ ! -f "$WHISPER_SRC" ]; then
     echo "ERROR: whisper-cli binary not found at $WHISPER_SRC. Please compile it first."
     exit 1
 fi
+# Strip the binary to reduce size
+strip "$WHISPER_SRC"
 cp "$WHISPER_SRC" "$BUILD_DIR/usr/share/vozes/bin/whisper-cli"
 # Create a symlink in /usr/bin for convenience
 mkdir -p "$BUILD_DIR/usr/bin"
