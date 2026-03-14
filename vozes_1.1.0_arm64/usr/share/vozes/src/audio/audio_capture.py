@@ -27,10 +27,33 @@ class AudioController:
         self.vad.set_mode(2) # Less aggressive than 3
         
         # Initialize OpenWakeWord (using default pre-trained models)
-        # In version 0.4.0, the parameter is 'wakeword_model_paths'
         import openwakeword
-        jarvis_path = openwakeword.models["hey_jarvis"]["model_path"]
-        self.oww_model = Model(wakeword_model_paths=[jarvis_path])
+        from openwakeword.model import Model
+        
+        # In 0.6.0 models might not be downloaded by default or accessed differently
+        try:
+            # Try to get the model path, if it fails we might need to download it
+            # Using the recommended way for 0.6.0 if available, or fallback to manual path
+            import os
+            base_dir = os.path.dirname(openwakeword.__file__)
+            jarvis_path = os.path.join(base_dir, "resources", "models", "hey_jarvis.onnx")
+            
+            if not os.path.exists(jarvis_path):
+                # Try .tflite as well
+                jarvis_path_tflite = os.path.join(base_dir, "resources", "models", "hey_jarvis.tflite")
+                if os.path.exists(jarvis_path_tflite):
+                    jarvis_path = jarvis_path_tflite
+                else:
+                    print("Downloading openWakeWord models...")
+                    from openwakeword.utils import download_models
+                    download_models()
+            
+            self.oww_model = Model(wakeword_model_paths=[jarvis_path])
+        except Exception as e:
+            print(f"Error initializing OpenWakeWord: {e}")
+            # Last resort: let it try to find models itself
+            self.oww_model = Model(wakeword_models=["hey_jarvis"])
+            
         self._thread = None
         self._stop_event = threading.Event()
 

@@ -1,10 +1,9 @@
 Package: vozes
-Version: 1.1.0
+Version: 1.5.0
 Section: utils
 Priority: optional
-Architecture: amd64
+Architecture: arm64
 Maintainer: Inled Group <hi@inled.es>
-Homepage: https://inled.es
 Depends: python3, python3-gi, python3-venv, python3-pip, libgirepository1.0-dev, libcairo2-dev, libportaudio2, libevdev2, libasound2, libpulse0
 Description: Professional voice dictation system for Linux using native whisper.cpp.
  Includes hotkey support, wake-word (Hey Jarvis), and automatic typing.

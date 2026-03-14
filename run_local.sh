@@ -12,6 +12,11 @@ source .venv/bin/activate
 echo "Installing requirements..."
 pip install -r requirements.txt
 
+# Install openwakeword without deps to avoid tflite-runtime issue on Python 3.13 / aarch64
+# openwakeword can use onnxruntime (which is in requirements.txt)
+echo "Installing openwakeword (special handling for Python 3.13/aarch64)..."
+pip install openwakeword==0.6.0 --no-deps
+
 # Download and compile whisper.cpp
 if [ ! -d "bin/whisper.cpp" ]; then
     echo "Downloading and compiling whisper.cpp..."

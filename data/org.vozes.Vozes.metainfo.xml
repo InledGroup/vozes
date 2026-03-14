@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.vozes.Vozes</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Vozes</name>
+  <summary>Voice dictation using whisper.cpp</summary>
+  <description>
+    <p>
+      Vozes is a simple voice dictation application that uses whisper.cpp for high-quality, 
+      offline speech-to-text. It allows you to dictate text into any application 
+      using a global hotkey or voice activation.
+    </p>
+    <ul>
+      <li>High-quality offline transcription.</li>
+      <li>Global hotkey support (default F12).</li>
+      <li>Voice activation ("Hey Jarvis").</li>
+      <li>Easy setup with guided assistant.</li>
+      <li>Supports multiple languages.</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">org.vozes.Vozes.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main Window</caption>
+      <image>https://raw.githubusercontent.com/InledGroup/vozes/main/screenshots/main.png</image>
+    </screenshot>
+  </screenshots>
+  <url type="homepage">https://inled.es</url>
+  <url type="vcs-browser">https://github.com/InledGroup/vozes</url>
+  <developer_name>Inled Group</developer_name>
+  <update_contact>hi@inled.es</update_contact>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="1.1.0" date="2024-03-14" />
+  </releases>
+</component>

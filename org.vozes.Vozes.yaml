@@ -1,3 +1,4 @@
+# App info for Inled Group
 app-id: org.vozes.Vozes
 runtime: org.gnome.Platform
 runtime-version: '45'
@@ -11,13 +12,27 @@ finish-args:
   - --device=all
   - --filesystem=home
   - --socket=pulseaudio
+  - --device=dri
+  - --talk-name=org.freedesktop.Notifications
+
 modules:
   - name: whisper-cpp
     buildsystem: cmake-ninja
+    config-opts:
+      - -DWHISPER_BUILD_EXAMPLES=OFF
+      - -DWHISPER_BUILD_TESTS=OFF
     sources:
       - type: git
         url: https://github.com/ggerganov/whisper.cpp.git
-        branch: master
+        tag: v1.5.4
+
+  - name: python3-dependencies
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app -r requirements.txt
+    sources:
+      - type: file
+        path: requirements.txt
 
   - name: vozes
     buildsystem: simple
@@ -25,12 +40,16 @@ modules:
       - install -D -m 755 vozes.sh /app/bin/vozes
       - mkdir -p /app/share/vozes
       - cp -r src /app/share/vozes/
-      - pip3 install --prefix=/app -r requirements.txt
+      - mkdir -p /app/share/vozes/data
+      - cp vozes.png /app/share/vozes/data/
+      - install -D -m 644 data/org.vozes.Vozes.desktop /app/share/applications/org.vozes.Vozes.desktop
+      - install -D -m 644 vozes.png /app/share/icons/hicolor/scalable/apps/org.vozes.Vozes.png
+      - install -D -m 644 data/org.vozes.Vozes.metainfo.xml /app/share/metainfo/org.vozes.Vozes.metainfo.xml
     sources:
       - type: dir
         path: .
       - type: script
         dest-filename: vozes.sh
         commands:
-          - export PYTHONPATH=/app/share/vozes/src:$PYTHONPATH
+          - export PYTHONPATH=/app/share/vozes/src:/app/lib/python3.11/site-packages:$PYTHONPATH
           - exec python3 /app/share/vozes/src/main.py "$@"

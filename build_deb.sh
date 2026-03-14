@@ -3,7 +3,7 @@ set -e
 
 # Configuration
 APP_NAME="vozes"
-VERSION="1.1.0"
+VERSION="1.5.0"
 # Detect architecture automatically
 ARCH=$(dpkg --print-architecture)
 DEB_NAME="${APP_NAME}_${VERSION}_${ARCH}"
@@ -23,6 +23,7 @@ mkdir -p "$BUILD_DIR/usr/bin"
 mkdir -p "$BUILD_DIR/usr/share/vozes/src"
 mkdir -p "$BUILD_DIR/usr/share/vozes/bin"
 mkdir -p "$BUILD_DIR/usr/share/vozes/models"
+mkdir -p "$BUILD_DIR/usr/share/vozes/data"
 mkdir -p "$BUILD_DIR/usr/share/applications"
 mkdir -p "$BUILD_DIR/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "$BUILD_DIR/etc/udev/rules.d"
@@ -35,10 +36,14 @@ if [ ! -f "$WHISPER_SRC" ]; then
 fi
 cp "$WHISPER_SRC" "$BUILD_DIR/usr/bin/whisper-cli"
 
-# 4. Copy Source Code and Data
+# 4. Copy Source Code, Data and Icon
 cp -r src/* "$BUILD_DIR/usr/share/vozes/src/"
 cp requirements.txt "$BUILD_DIR/usr/share/vozes/"
 cp data/99-vozes.rules "$BUILD_DIR/etc/udev/rules.d/"
+if [ -f "vozes.png" ]; then
+    cp vozes.png "$BUILD_DIR/usr/share/icons/hicolor/scalable/apps/vozes.png"
+    cp vozes.png "$BUILD_DIR/usr/share/vozes/data/vozes.png"
+fi
 
 # 5. Create Desktop Entry
 cat <<EOF > "$BUILD_DIR/usr/share/applications/org.vozes.Vozes.desktop"
@@ -72,7 +77,7 @@ Version: $VERSION
 Section: utils
 Priority: optional
 Architecture: $ARCH
-Maintainer: Vozes Dev <dev@vozes.org>
+Maintainer: Inled Group <hi@inled.es>
 Depends: python3, python3-gi, python3-venv, python3-pip, libgirepository1.0-dev, libcairo2-dev, libportaudio2, libevdev2, libasound2, libpulse0
 Description: Professional voice dictation system for Linux using native whisper.cpp.
  Includes hotkey support, wake-word (Hey Jarvis), and automatic typing.

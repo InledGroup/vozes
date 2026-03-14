@@ -8,6 +8,7 @@ DEFAULT_CONFIG = {
     "wake_word_sensitivity": 0.5,
     "hotkey": "KEY_F12",
     "language": "es", # Default to Spanish as requested
+    "app_language": None, # Auto-detect if None
     "manual_mode": True, # Default to manual control
     "models_dir": str(Path.home() / ".local" / "share" / "vozes" / "models"),
 }

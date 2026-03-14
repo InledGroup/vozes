@@ -2,6 +2,13 @@ import sys
 import threading
 import os
 import time
+import traceback
+
+# Force software rendering and disable GPU acceleration for GTK/Mesa
+os.environ["GSK_RENDERER"] = "cairo"
+os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
+os.environ["GDK_BACKEND"] = "wayland,x11"
+
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
@@ -12,10 +19,11 @@ from audio.audio_capture import AudioController
 from inference.whisper_runner import WhisperRunner
 from input.input_manager import InputManager
 from gui.app import VozesApp
+from utils.i18n import _
 
 class VozesController:
     def __init__(self):
-        self.app = VozesApp(app_controller=self)
+        self.app = VozesApp(app_controller=self, application_id="org.vozes.Vozes.Dev")
         
         self.audio = AudioController(
             callback_on_wake=self.on_wake_word,
@@ -58,13 +66,13 @@ class VozesController:
 
     def on_wake_word(self):
         print("Wake word callback")
-        self.update_gui_status("Escuchando...")
+        self.update_gui_status(_("status_recording"))
         
     def on_hotkey(self):
         print("Hotkey detected in VozesController!")
         if not self.audio.is_recording:
             self.audio.start_recording()
-            self.update_gui_status("Escuchando...")
+            self.update_gui_status(_("status_recording"))
         else:
             # Manual stop
             self.audio.is_recording = False
@@ -72,7 +80,7 @@ class VozesController:
 
     def on_silence_detected(self, wav_path):
         print("Silence detected, processing audio...")
-        self.update_gui_status("Transcribiendo...")
+        self.update_gui_status(_("status_transcribing"))
         
         self.audio.save_wav(wav_path)
         
@@ -107,5 +115,10 @@ class VozesController:
         threading.Thread(target=run_inference, daemon=True).start()
 
 if __name__ == "__main__":
-    controller = VozesController()
-    controller.run()
+    try:
+        controller = VozesController()
+        controller.run()
+    except Exception:
+        print("\nFATAL ERROR DETECTED:")
+        traceback.print_exc()
+        sys.exit(1)

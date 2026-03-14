@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+
+echo "Setting up Vozes environment..."
+
+# 1. Create Virtual Environment in /usr/share/vozes
+# We do this to avoid polluting system python and ensure all deps work
+cd /usr/share/vozes
+python3 -m venv venv --system-site-packages
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# 2. Reload udev rules
+echo "Reloading udev rules..."
+udevadm control --reload-rules || true
+udevadm trigger || true
+
+# 3. Ensure 'input' group
+getent group input >/dev/null || groupadd -r input
+
+echo "----------------------------------------------------------"
+echo "Vozes installed successfully!"
+echo "Run it from your application menu or type 'vozes' in terminal."
+echo "----------------------------------------------------------"

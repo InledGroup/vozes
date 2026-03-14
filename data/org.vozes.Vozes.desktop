@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Vozes
+Comment=Voice dictation with whisper.cpp
+Exec=vozes
+Icon=org.vozes.Vozes
+Terminal=false
+Type=Application
+Categories=Utility;AudioVideo;
+StartupNotify=true
+X-GNOME-UsesNotifications=true
