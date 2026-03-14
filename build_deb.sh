@@ -40,7 +40,7 @@ if [ ! -f "$WHISPER_SRC" ]; then
     mkdir -p bin
     if [ ! -d "bin/whisper.cpp" ]; then
         echo "Cloning whisper.cpp repository..."
-        git clone --depth 1 --branch v1.8.2 https://github.com/ggerganov/whisper.cpp.git bin/whisper.cpp
+        git clone --depth 1 --branch v1.8.2 https://github.com/gglm-org/whisper.cpp.git bin/whisper.cpp
     fi
 
     echo "Compiling whisper.cpp (this may take a few minutes)..."

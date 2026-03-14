@@ -38,6 +38,20 @@ sudo usermod -aG input $USER
 # Log out and log back in for changes to take effect
 ```
 
+## Requirements:
+```bash
+PyAudio==0.2.14
+numpy>=2.1.0
+webrtcvad==2.0.10
+onnxruntime>=1.17.0
+scipy>=1.13.0
+scikit-learn>=1.4.0
+tqdm>=4.66.0
+requests==2.31.0
+evdev==1.7.0
+PyGObject==3.48.2
+```
+
 ---
 
 ## 🚀 How to Use
