@@ -17,6 +17,7 @@ class AudioController:
         self.stream = None
         self.is_recording = False
         self.is_listening_for_wake = False
+        self.manual_mode = False
         self.callback_on_wake = callback_on_wake
         self.callback_on_silence = callback_on_silence
         self.frames = []
@@ -96,14 +97,16 @@ class AudioController:
                     silence_frames = 0
                     
                 if recording_count % 20 == 0:
-                    print(f"Recording... {recording_count} frames, silence_frames: {silence_frames}/{max_silence_frames}")
+                    print(f"Recording... {recording_count} frames, silence_frames: {silence_frames}/{max_silence_frames} (Manual: {self.manual_mode})")
 
-                # Force stop if silence detected or too long
-                if silence_frames > max_silence_frames or recording_count > max_recording_frames:
-                    if silence_frames > max_silence_frames:
-                        print(f"Silence detected ({silence_frames} frames). Stopping.")
-                    else:
+                # Force stop if silence detected (only if NOT in manual mode) or too long
+                should_stop = (not self.manual_mode and silence_frames > max_silence_frames) or (recording_count > max_recording_frames)
+                
+                if should_stop:
+                    if recording_count > max_recording_frames:
                         print("Max duration reached. Stopping.")
+                    else:
+                        print(f"Silence detected ({silence_frames} frames). Stopping.")
                         
                     self.is_recording = False
                     if self.callback_on_silence:

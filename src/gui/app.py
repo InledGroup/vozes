@@ -287,8 +287,39 @@ class VozesWindow(Adw.ApplicationWindow):
         self.model_row.connect("changed", lambda r: config.set("model_path", r.get_text()))
         group.add(self.model_row)
         
+        # Language Selection
+        languages = {
+            "es": "Español",
+            "en": "English",
+            "fr": "Français",
+            "de": "Deutsch",
+            "it": "Italiano",
+            "pt": "Português",
+            "auto": "Auto-detectar"
+        }
+        
+        self.lang_row = Adw.ComboRow(title="Idioma de dictado")
+        model = Gtk.StringList()
+        lang_keys = list(languages.keys())
+        for lang_name in languages.values():
+            model.append(lang_name)
+        self.lang_row.set_model(model)
+        
+        current_lang = config.get("language", "es")
+        if current_lang in lang_keys:
+            self.lang_row.set_selected(lang_keys.index(current_lang))
+            
+        self.lang_row.connect("notify::selected", self.on_language_changed, lang_keys)
+        group.add(self.lang_row)
+        
         group2 = Adw.PreferencesGroup(title="Entrada y Atajos")
         page.add(group2)
+        
+        self.manual_row = Adw.SwitchRow(title="Control Manual (Pulsar para parar)")
+        self.manual_row.set_subtitle("Si está activo, debe volver a pulsar la tecla para terminar de dictar")
+        self.manual_row.set_active(config.get("manual_mode", True))
+        self.manual_row.connect("notify::active", self.on_manual_mode_changed)
+        group2.add(self.manual_row)
         
         self.hotkey_row = Adw.EntryRow(title="Hotkey (código evdev)")
         self.hotkey_row.set_text(config.get("hotkey", "KEY_F12"))
@@ -296,6 +327,19 @@ class VozesWindow(Adw.ApplicationWindow):
         group2.add(self.hotkey_row)
         
         self.content_stack.add_titled(page, "General", "General")
+
+    def on_language_changed(self, combo, pspec, lang_keys):
+        selected_idx = combo.get_selected()
+        lang_code = lang_keys[selected_idx]
+        config.set("language", lang_code)
+        print(f"Language changed to: {lang_code}")
+
+    def on_manual_mode_changed(self, switch, pspec):
+        is_active = switch.get_active()
+        config.set("manual_mode", is_active)
+        if self.app_controller and self.app_controller.audio:
+            self.app_controller.audio.manual_mode = is_active
+        print(f"Manual mode changed to: {is_active}")
 
     def init_models_page(self):
         page = Adw.PreferencesPage()

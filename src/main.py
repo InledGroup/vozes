@@ -20,6 +20,7 @@ class VozesController:
             callback_on_wake=self.on_wake_word,
             callback_on_silence=self.on_silence_detected
         )
+        self.audio.manual_mode = config.get("manual_mode", True)
         
         # Load configs
         self.whisper_bin = config.get("whisper_bin_path", "")
@@ -77,12 +78,13 @@ class VozesController:
         # Reload configs in case they changed in GUI
         bin_path = config.get("whisper_bin_path", "")
         model_path = config.get("model_path", "")
+        language = config.get("language", "es")
         
         if not bin_path or not model_path:
             self.update_gui_status("Error: Configure rutas en ajustes", auto_hide=True)
             return
 
-        runner = WhisperRunner(bin_path, model_path)
+        runner = WhisperRunner(bin_path, model_path, language=language)
         
         # Run inference in a background thread to not block UI/Audio
         def run_inference():

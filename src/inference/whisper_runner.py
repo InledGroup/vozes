@@ -2,9 +2,10 @@ import subprocess
 import os
 
 class WhisperRunner:
-    def __init__(self, bin_path, model_path):
+    def __init__(self, bin_path, model_path, language="auto"):
         self.bin_path = bin_path
         self.model_path = model_path
+        self.language = language
 
     def transcribe(self, wav_path):
         """
@@ -19,7 +20,8 @@ class WhisperRunner:
             self.bin_path,
             "-m", self.model_path,
             "-f", wav_path,
-            "-nt" # No timestamps
+            "-nt", # No timestamps
+            "-l", self.language
         ]
         
         try:

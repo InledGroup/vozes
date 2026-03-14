@@ -30,7 +30,12 @@ class InputManager:
                     ecodes.EV_KEY: supported_keys
                 }
                 
-                self.uinput = UInput(cap, name="Vozes-Virtual-Keyboard")
+                # Using BUS_USB and dummy IDs to look more like a real hardware device
+                self.uinput = UInput(cap, name="Vozes-Virtual-Keyboard",
+                                    bustype=ecodes.BUS_USB,
+                                    vendor=0x1234,
+                                    product=0x5678,
+                                    version=1)
                 print("Escritura virtual (UInput) inicializada correctamente.")
                 return
             except Exception as ex:
@@ -115,6 +120,12 @@ class InputManager:
             print("Escritura virtual no disponible.")
             return
             
+        print(f"Typing text: '{text}'")
+        
+        # Give a small delay to make sure the hotkey is released 
+        # and focus is back on the application
+        time.sleep(0.3)
+        
         char_map = {
             ' ': ecodes.KEY_SPACE, '\n': ecodes.KEY_ENTER, '.': ecodes.KEY_DOT, 
             ',': ecodes.KEY_COMMA, '-': ecodes.KEY_MINUS, '?': ecodes.KEY_SLASH,
@@ -136,15 +147,20 @@ class InputManager:
                     if shift: self.uinput.write(ecodes.EV_KEY, ecodes.KEY_LEFTSHIFT, 1)
                     self.uinput.write(ecodes.EV_KEY, code, 1)
                     self.uinput.syn()
-                    time.sleep(0.01)
+                    time.sleep(0.02)
                     self.uinput.write(ecodes.EV_KEY, code, 0)
                     if shift: self.uinput.write(ecodes.EV_KEY, ecodes.KEY_LEFTSHIFT, 0)
                     self.uinput.syn()
-                    time.sleep(0.01)
-                except:
-                    pass
+                    time.sleep(0.02)
+                except Exception as e:
+                    print(f"Error typing char '{char}': {e}")
+            else:
+                print(f"Char '{char}' not found in key map")
         
         # Espacio final para separar dictados
-        self.uinput.write(ecodes.EV_KEY, ecodes.KEY_SPACE, 1)
-        self.uinput.write(ecodes.EV_KEY, ecodes.KEY_SPACE, 0)
-        self.uinput.syn()
+        try:
+            self.uinput.write(ecodes.EV_KEY, ecodes.KEY_SPACE, 1)
+            self.uinput.write(ecodes.EV_KEY, ecodes.KEY_SPACE, 0)
+            self.uinput.syn()
+        except:
+            pass
