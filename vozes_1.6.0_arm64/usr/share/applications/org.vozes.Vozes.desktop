@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Vozes
+Comment=Dictado por voz profesional con Whisper.cpp
+Exec=/usr/bin/vozes
+Icon=vozes
+Terminal=false
+Type=Application
+Categories=Utility;Audio;
+Keywords=voice;speech;dictation;whisper;
