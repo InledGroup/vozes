@@ -21,17 +21,15 @@ class InputManager:
                     try: self.uinput.close()
                     except: pass
                 
-                # Filtrar solo teclas reales (0-248) para evitar Errno 22
-                # KEY_RESERVED=0, KEY_MIN_INTERESTING=1, KEY_MAX=0x2ff
-                # Supported keys (Standard keyboard range)
-                supported_keys = [k for k in range(1, 248)]
+                # More complete set of keys for a "real" keyboard look
+                supported_keys = [k for k in range(1, 0x240) if k in ecodes.KEY]
                 
                 cap = {
-                    ecodes.EV_KEY: supported_keys
+                    ecodes.EV_KEY: supported_keys,
+                    ecodes.EV_MSC: [ecodes.MSC_SCAN]
                 }
                 
                 # Using BUS_USB and standard dummy IDs
-                # We remove EV_REP as it was causing initialization errors
                 self.uinput = UInput(cap, name="Vozes-Virtual-Keyboard", 
                                     bustype=ecodes.BUS_USB, 
                                     vendor=0x1234, 
@@ -73,6 +71,10 @@ class InputManager:
                 for path in evdev.list_devices():
                     try:
                         dev = evdev.InputDevice(path)
+                        # Don't listen to our own virtual keyboard
+                        if dev.name == "Vozes-Virtual-Keyboard":
+                            dev.close()
+                            continue
                         if ecodes.EV_KEY in dev.capabilities() and len(dev.capabilities()[ecodes.EV_KEY]) > 20:
                             active_keyboards.append(dev)
                         else:
@@ -124,7 +126,7 @@ class InputManager:
         print(f"Typing text: '{text}'")
         
         # Give a small delay to make sure the hotkey is released 
-        time.sleep(0.3)
+        time.sleep(0.5)
         
         # Extended character map
         char_map = {
@@ -179,11 +181,11 @@ class InputManager:
                     if shift: self.uinput.write(ecodes.EV_KEY, ecodes.KEY_LEFTSHIFT, 1)
                     self.uinput.write(ecodes.EV_KEY, code, 1)
                     self.uinput.syn()
-                    time.sleep(0.01)
+                    time.sleep(0.05)
                     self.uinput.write(ecodes.EV_KEY, code, 0)
                     if shift: self.uinput.write(ecodes.EV_KEY, ecodes.KEY_LEFTSHIFT, 0)
                     self.uinput.syn()
-                    time.sleep(0.01)
+                    time.sleep(0.05)
                 except Exception as e:
                     print(f"Error typing char '{char}': {e}")
             else:

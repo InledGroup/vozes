@@ -391,6 +391,8 @@ class OverlayWindow(Gtk.Window):
         super().__init__(**kwargs)
         self.set_title("Vozes Status")
         self.set_decorated(False)
+        self.set_can_focus(False)
+        self.set_focusable(False)
         self.set_default_size(200, 50)
         
         self.label = Gtk.Label(label="Ready")

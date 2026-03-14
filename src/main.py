@@ -1,6 +1,7 @@
 import sys
 import threading
 import os
+import time
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
@@ -91,6 +92,10 @@ class VozesController:
             text = runner.transcribe(wav_path)
             if text:
                 print(f"Transcribed: {text}")
+                # Hide status first so focus returns to the previous app
+                self.update_gui_status(None)
+                # Wait a tiny bit for the window manager to process the focus switch
+                time.sleep(0.1)
                 self.input_manager.type_text(text)
                 self.update_gui_status("Transcribed", auto_hide=True)
             else:
