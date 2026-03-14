@@ -17,22 +17,29 @@ class ConfigManager:
         self.config_path = config_dir / "config.json"
         self.config = self._load_config()
         
-        # Auto-detect local binary if not set
-        if not self.config.get("whisper_bin_path"):
+        # Auto-detect local binary if not set OR if set to deprecated 'main'
+        current_bin = self.config.get("whisper_bin_path", "")
+        if not current_bin or current_bin.endswith("/main"):
             project_root = Path(__file__).parent.parent
             search_paths = [
                 project_root / "bin" / "whisper.cpp" / "build" / "bin" / "whisper-cli",
                 project_root / "bin" / "whisper.cpp" / "whisper-cli",
-                project_root / "bin" / "whisper.cpp" / "build" / "bin" / "main",
-                project_root / "bin" / "whisper.cpp" / "main",
                 Path.cwd() / "bin" / "whisper.cpp" / "build" / "bin" / "whisper-cli",
                 Path.cwd() / "bin" / "whisper.cpp" / "whisper-cli",
-                Path.cwd() / "bin" / "whisper.cpp" / "build" / "bin" / "main",
-                Path.cwd() / "bin" / "whisper.cpp" / "main",
                 Path("/usr/bin/whisper-cli"),
-                Path("/usr/bin/whisper-main"),
                 Path("/usr/local/bin/whisper-cli")
             ]
+            
+            # Only add 'main' as last resort if we don't have a binary yet
+            if not current_bin:
+                search_paths.extend([
+                    project_root / "bin" / "whisper.cpp" / "build" / "bin" / "main",
+                    project_root / "bin" / "whisper.cpp" / "main",
+                    Path.cwd() / "bin" / "whisper.cpp" / "build" / "bin" / "main",
+                    Path.cwd() / "bin" / "whisper.cpp" / "main",
+                    Path("/usr/bin/whisper-main"),
+                ])
+
             for p in search_paths:
                 if p.exists():
                     self.config["whisper_bin_path"] = str(p)
