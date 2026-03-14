@@ -23,15 +23,15 @@ class InputManager:
                 
                 # Filtrar solo teclas reales (0-248) para evitar Errno 22
                 # KEY_RESERVED=0, KEY_MIN_INTERESTING=1, KEY_MAX=0x2ff
-                # Supported keys for a standard keyboard
+                # Supported keys (Standard keyboard range)
                 supported_keys = [k for k in range(1, 248)]
-
+                
                 cap = {
-                    ecodes.EV_KEY: supported_keys,
-                    ecodes.EV_REP: 1 # Required by some compositors
+                    ecodes.EV_KEY: supported_keys
                 }
-
-                # Using BUS_USB and dummy IDs to look more like a real hardware device
+                
+                # Using BUS_USB and standard dummy IDs
+                # We remove EV_REP as it was causing initialization errors
                 self.uinput = UInput(cap, name="Vozes-Virtual-Keyboard", 
                                     bustype=ecodes.BUS_USB, 
                                     vendor=0x1234, 
