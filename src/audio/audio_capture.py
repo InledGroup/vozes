@@ -81,6 +81,16 @@ class AudioController:
                 self.frames.append(data)
                 recording_count += 1
                 
+                # Also listen for wake word during recording to allow "stop by voice"
+                audio_data = np.frombuffer(data, dtype=np.int16)
+                prediction = self.oww_model.predict(audio_data)
+                stop_by_voice = False
+                for mdl, score in prediction.items():
+                    if score > 0.45: # Slightly higher threshold when recording to avoid false stops
+                        print(f"Wake word detected during recording! Stopping... Model: {mdl}, Score: {score}")
+                        stop_by_voice = True
+                        break
+                
                 # Check for silence using VAD
                 is_speech = False
                 frame_length = int(self.RATE * 0.02) # 20ms
@@ -99,12 +109,14 @@ class AudioController:
                 if recording_count % 20 == 0:
                     print(f"Recording... {recording_count} frames, silence_frames: {silence_frames}/{max_silence_frames} (Manual: {self.manual_mode})")
 
-                # Force stop if silence detected (only if NOT in manual mode) or too long
-                should_stop = (not self.manual_mode and silence_frames > max_silence_frames) or (recording_count > max_recording_frames)
+                # Force stop if silence detected, wake word detected, or too long
+                should_stop = stop_by_voice or (not self.manual_mode and silence_frames > max_silence_frames) or (recording_count > max_recording_frames)
                 
                 if should_stop:
                     if recording_count > max_recording_frames:
                         print("Max duration reached. Stopping.")
+                    elif stop_by_voice:
+                        print("Stopped by voice command.")
                     else:
                         print(f"Silence detected ({silence_frames} frames). Stopping.")
                         
