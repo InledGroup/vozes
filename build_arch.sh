@@ -85,7 +85,7 @@ post_install() {
   python3 -m venv venv --system-site-packages
   source venv/bin/activate
   pip install --upgrade pip
-  pip install setuptools
+  pip install "setuptools<70"
   
   # Install python requirements
   pip install -r requirements.txt

@@ -144,8 +144,8 @@ cd /usr/share/vozes
 python3 -m venv venv --system-site-packages
 source venv/bin/activate
 pip install --upgrade pip
-# setuptools needed for pkg_resources (Python 3.14+ drops it from stdlib)
-pip install setuptools
+# setuptools needed for pkg_resources (Python 3.14+ drops it from stdlib, and setuptools 70+ removes pkg_resources)
+pip install "setuptools<70"
 # Install requirements (numpy >= 2.1.0 for Python 3.13)
 pip install -r requirements.txt
 # Special handling for openwakeword on Python 3.13 / ARM64
