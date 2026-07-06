@@ -3,6 +3,10 @@ set -e
 
 # Configuration
 APP_NAME="vozes"
+# Extract version from build_deb.sh to maintain a single source of truth
+if [ -z "$VERSION" ] && [ -f "build_deb.sh" ]; then
+    VERSION=$(grep -oP 'VERSION="\$\{VERSION:-\K[^}]+' build_deb.sh || echo "")
+fi
 VERSION="${VERSION:-1.6.0}"
 
 # Ensure deb build exists to reuse its files
