@@ -9,8 +9,50 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  bump-version:
     if: contains(github.event.head_commit.message, '[RELEASE]')
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump patch version
+        id: bump
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get latest release tag (e.g. v1.6.0), strip 'v', default to 1.0.0
+          LATEST=$(gh release list --limit 1 --json tagName -q '.[0].tagName // "v1.0.0"' 2>/dev/null || echo "v1.0.0")
+          VERSION="${LATEST#v}"
+          echo "Last release: $VERSION"
+
+          # Split into MAJOR.MINOR.PATCH and increment patch
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          echo "New version: $NEW_VERSION"
+
+          # Write new version into build_deb.sh
+          sed -i "s/VERSION=\"\${VERSION:-[^}]*}\"/VERSION=\"\${VERSION:-${NEW_VERSION}}\"/" build_deb.sh
+
+          # Commit the version bump back to main
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add build_deb.sh
+          git commit -m "chore: bump version to ${NEW_VERSION} [skip ci]"
+          git push
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+  build:
+    needs: bump-version
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -22,6 +64,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: main   # pull the version-bumped commit
 
       - name: Install system dependencies
         run: |
@@ -53,7 +97,7 @@ jobs:
             *.pkg.tar.zst
 
   release:
-    needs: build
+    needs: [bump-version, build]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -65,25 +109,17 @@ jobs:
           path: ./artifacts
           merge-multiple: true
 
-      - name: Get package version
-        id: get_version
-        run: |
-          VERSION=$(grep -oP 'VERSION="\$\{VERSION:-\K[^}]+' build_deb.sh)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Found version: $VERSION"
-
       - name: Create or Update GitHub Release
         id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
+          VERSION="${{ needs.bump-version.outputs.new_version }}"
           TAG="v${VERSION}"
-          
+
           echo "Creating/updating release for tag: $TAG"
-          
-          # Check if the release/tag already exists
-          if gh release view "$TAG" >/dev/null 2>&1; then
+
+          if gh release view "$TAG" > /dev/null 2>&1; then
             echo "Release $TAG already exists, uploading packages to it..."
             gh release upload "$TAG" ./artifacts/* --clobber
           else
@@ -98,7 +134,7 @@ jobs:
       - name: Get Uploaded Asset URLs
         id: get_urls
         run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
+          VERSION="${{ needs.bump-version.outputs.new_version }}"
           TAG="v${VERSION}"
           URLS=""
           for file in ./artifacts/*; do
