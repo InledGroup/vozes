@@ -42,12 +42,16 @@ jobs:
           # Write new version into build_deb.sh
           sed -i "s/VERSION=\"\${VERSION:-[^}]*}\"/VERSION=\"\${VERSION:-${NEW_VERSION}}\"/" build_deb.sh
 
-          # Commit the version bump back to main
+          # Commit the version bump back to main only if there are changes
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add build_deb.sh
-          git commit -m "chore: bump version to ${NEW_VERSION} [skip ci]"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: bump version to ${NEW_VERSION} [skip ci]"
+            git push
+          else
+            echo "Version in build_deb.sh is already set to ${NEW_VERSION}, skipping commit."
+          fi
 
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
