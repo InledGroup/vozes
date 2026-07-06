@@ -18,13 +18,17 @@ class AudioController:
         self.is_recording = False
         self.is_listening_for_wake = False
         self.manual_mode = False
+        self.voice_triggered = False
         self.callback_on_wake = callback_on_wake
         self.callback_on_silence = callback_on_silence
         self.frames = []
         
         # Initialize VAD
         self.vad = webrtcvad.Vad()
-        self.vad.set_mode(2) # Less aggressive than 3
+        from config import config
+        vad_mode = config.get("vad_mode", 2)
+        vad_mode = max(0, min(3, int(vad_mode)))
+        self.vad.set_mode(vad_mode)
         
         # Initialize OpenWakeWord (using default pre-trained models)
         import openwakeword
@@ -133,15 +137,24 @@ class AudioController:
                         stop_by_voice = True
                         break
                 
-                # Check for silence using VAD
+                # Check for silence using VAD + Energy threshold (Noise Gate)
                 is_speech = False
-                frame_length = int(self.RATE * 0.02) # 20ms
-                for i in range(0, len(data), frame_length * 2):
-                    chunk20ms = data[i:i+frame_length*2]
-                    if len(chunk20ms) == frame_length * 2:
-                        if self.vad.is_speech(chunk20ms, self.RATE):
-                            is_speech = True
-                            break
+                
+                # Check energy first
+                audio_data = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+                rms = np.sqrt(np.mean(audio_data**2)) if len(audio_data) > 0 else 0
+                
+                from config import config
+                rms_threshold = config.get("silence_rms_threshold", 1200)
+                
+                if rms >= rms_threshold:
+                    frame_length = int(self.RATE * 0.02) # 20ms
+                    for i in range(0, len(data), frame_length * 2):
+                        chunk20ms = data[i:i+frame_length*2]
+                        if len(chunk20ms) == frame_length * 2:
+                            if self.vad.is_speech(chunk20ms, self.RATE):
+                                is_speech = True
+                                break
                 
                 if not is_speech:
                     silence_frames += 1
@@ -149,10 +162,11 @@ class AudioController:
                     silence_frames = 0
                     
                 if recording_count % 20 == 0:
-                    print(f"Recording... {recording_count} frames, silence_frames: {silence_frames}/{max_silence_frames} (Manual: {self.manual_mode})")
+                    print(f"Recording... {recording_count} frames, silence_frames: {silence_frames}/{max_silence_frames} (RMS: {rms:.1f}, Threshold: {rms_threshold}, is_speech: {is_speech})")
 
                 # Force stop if silence detected, wake word detected, or too long
-                should_stop = stop_by_voice or (not self.manual_mode and silence_frames > max_silence_frames) or (recording_count > max_recording_frames)
+                is_manual = self.manual_mode and not self.voice_triggered
+                should_stop = stop_by_voice or (not is_manual and silence_frames > max_silence_frames) or (recording_count > max_recording_frames)
                 
                 if should_stop:
                     if recording_count > max_recording_frames:
@@ -168,21 +182,36 @@ class AudioController:
             else:
                 recording_count = 0
                 silence_frames = 0
-                # Listen for wake word
-                audio_data = np.frombuffer(data, dtype=np.int16)
-                prediction = self.oww_model.predict(audio_data)
-                # Check if any wakeword score > threshold
-                for mdl, score in prediction.items():
-                    if score > 0.4: # Slightly lower threshold for Jarvis
-                        print(f"Wake word detected! Model: {mdl}, Score: {score}")
-                        self.start_recording()
-                        if self.callback_on_wake:
-                            self.callback_on_wake()
-                        break
+                # Check config dynamically
+                from config import config
+                wake_enabled = config.get("wake_word_enabled", True)
+                
+                if wake_enabled:
+                    # Listen for wake word
+                    audio_data = np.frombuffer(data, dtype=np.int16)
+                    prediction = self.oww_model.predict(audio_data)
+                    threshold = config.get("wake_word_sensitivity", 0.5)
+                    # Check if any wakeword score > threshold
+                    for mdl, score in prediction.items():
+                        if score > threshold:
+                            print(f"Wake word detected! Model: {mdl}, Score: {score}")
+                            self.start_recording(voice_triggered=True)
+                            if self.callback_on_wake:
+                                self.callback_on_wake()
+                            break
 
-    def start_recording(self):
-        print("Recording started...")
+    def set_vad_mode(self, mode):
+        mode = max(0, min(3, int(mode)))
+        self.vad.set_mode(mode)
+        print(f"VAD Mode set to: {mode}")
+
+    def set_silence_threshold(self, value):
+        print(f"Silence volume threshold set to: {value}")
+
+    def start_recording(self, voice_triggered=False):
+        print(f"Recording started (voice_triggered: {voice_triggered})...")
         self.is_recording = True
+        self.voice_triggered = voice_triggered
         self.frames = []
 
     def save_wav(self, filename):

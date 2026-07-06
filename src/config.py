@@ -10,6 +10,9 @@ DEFAULT_CONFIG = {
     "language": "es", # Default to Spanish as requested
     "app_language": None, # Auto-detect if None
     "manual_mode": True, # Default to manual control
+    "vad_mode": 2, # Default VAD mode (aggressiveness)
+    "wake_word_enabled": True, # Default to wake word activation enabled
+    "silence_rms_threshold": 1200, # Default volume threshold for silence (noise gate)
     "models_dir": str(Path.home() / ".local" / "share" / "vozes" / "models"),
 }
 

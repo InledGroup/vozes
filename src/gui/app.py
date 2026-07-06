@@ -367,6 +367,48 @@ class VozesWindow(Adw.ApplicationWindow):
         self.manual_row.connect("notify::active", self.on_manual_mode_changed)
         group2.add(self.manual_row)
         
+        self.vad_row = Adw.ComboRow(title=_("noise_sensitivity"))
+        self.vad_row.set_subtitle(_("noise_sensitivity_sub"))
+        vad_model = Gtk.StringList()
+        vad_model.append(_("noise_low"))
+        vad_model.append(_("noise_medium"))
+        vad_model.append(_("noise_high"))
+        vad_model.append(_("noise_highest"))
+        self.vad_row.set_model(vad_model)
+        
+        current_vad_mode = config.get("vad_mode", 2)
+        current_vad_mode = max(0, min(3, int(current_vad_mode)))
+        self.vad_row.set_selected(current_vad_mode)
+        self.vad_row.connect("notify::selected", self.on_vad_mode_changed)
+        group2.add(self.vad_row)
+        
+        self.noise_gate_row = Adw.ComboRow(title=_("noise_gate"))
+        self.noise_gate_row.set_subtitle(_("noise_gate_sub"))
+        gate_model = Gtk.StringList()
+        gate_model.append(_("noise_gate_low"))
+        gate_model.append(_("noise_gate_medium"))
+        gate_model.append(_("noise_gate_high"))
+        gate_model.append(_("noise_gate_highest"))
+        self.noise_gate_row.set_model(gate_model)
+        
+        current_gate = config.get("silence_rms_threshold", 1200)
+        gate_values = [500, 1200, 2000, 3000]
+        closest_idx = 1
+        if current_gate in gate_values:
+            closest_idx = gate_values.index(current_gate)
+        else:
+            closest_idx = min(range(len(gate_values)), key=lambda i: abs(gate_values[i]-current_gate))
+            
+        self.noise_gate_row.set_selected(closest_idx)
+        self.noise_gate_row.connect("notify::selected", self.on_noise_gate_changed, gate_values)
+        group2.add(self.noise_gate_row)
+        
+        self.wake_row = Adw.SwitchRow(title=_("wake_word_enabled"))
+        self.wake_row.set_subtitle(_("wake_word_enabled_sub"))
+        self.wake_row.set_active(config.get("wake_word_enabled", True))
+        self.wake_row.connect("notify::active", self.on_wake_word_enabled_changed)
+        group2.add(self.wake_row)
+        
         self.hotkey_row = Adw.EntryRow(title=_("hotkey_label"))
         self.hotkey_row.set_text(config.get("hotkey", "KEY_F12"))
         self.hotkey_row.connect("changed", lambda r: config.set("hotkey", r.get_text()))
@@ -398,6 +440,26 @@ class VozesWindow(Adw.ApplicationWindow):
         if self.app_controller and self.app_controller.audio:
             self.app_controller.audio.manual_mode = is_active
         print(f"Manual mode changed to: {is_active}")
+
+    def on_vad_mode_changed(self, combo, pspec):
+        selected_idx = combo.get_selected()
+        config.set("vad_mode", selected_idx)
+        if self.app_controller and self.app_controller.audio:
+            self.app_controller.audio.set_vad_mode(selected_idx)
+        print(f"VAD Mode changed to: {selected_idx}")
+
+    def on_wake_word_enabled_changed(self, switch, pspec):
+        is_active = switch.get_active()
+        config.set("wake_word_enabled", is_active)
+        print(f"Wake word activation enabled: {is_active}")
+
+    def on_noise_gate_changed(self, combo, pspec, gate_values):
+        selected_idx = combo.get_selected()
+        val = gate_values[selected_idx]
+        config.set("silence_rms_threshold", val)
+        if self.app_controller and self.app_controller.audio:
+            self.app_controller.audio.set_silence_threshold(val)
+        print(f"Silence threshold changed to: {val}")
 
     def init_models_page(self):
         page = Adw.PreferencesPage()
