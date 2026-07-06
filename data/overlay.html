@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        #glass-container {
+            width: 95%;
+            height: 95%;
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        #text-container {
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            width: 100%;
+            max-height: 90px;
+            overflow-y: auto;
+            margin-top: 5px;
+            line-height: 1.4;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            word-wrap: break-word;
+        }
+
+        #siri-container {
+            width: 100%;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: -5px;
+        }
+    </style>
+    <script src="siriwave.umd.min.js"></script>
+</head>
+<body>
+    <div id="glass-container">
+        <div id="text-container">Escuchando...</div>
+        <div id="siri-container"></div>
+    </div>
+
+    <script>
+        var siriWave = new SiriWave({
+            container: document.getElementById("siri-container"),
+            width: 450,
+            height: 90,
+            style: "ios9",
+            amplitude: 0.35,
+            speed: 0.18,
+            autostart: true
+        });
+
+        function updateText(text) {
+            const container = document.getElementById("text-container");
+            if (text && text.trim() !== "") {
+                container.innerText = text;
+                container.style.color = "white";
+            } else {
+                container.innerText = "Escuchando...";
+                container.style.color = "rgba(255, 255, 255, 0.5)";
+            }
+        }
+
+        function setWaveAmplitude(amp) {
+            siriWave.setAmplitude(amp);
+        }
+    </script>
+</body>
+</html>

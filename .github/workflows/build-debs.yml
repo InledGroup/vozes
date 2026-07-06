@@ -1,0 +1,129 @@
+name: Build and Release Packages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: contains(github.event.head_commit.message, '[RELEASE]')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake git dpkg-dev alien fakeroot zstd
+
+      - name: Build Debian Package
+        run: |
+          chmod +x build_deb.sh
+          ./build_deb.sh
+
+      - name: Build Fedora RPM Package
+        run: |
+          chmod +x build_rpm.sh
+          ./build_rpm.sh
+
+      - name: Build Arch Linux Package
+        run: |
+          chmod +x build_arch.sh
+          ./build_arch.sh
+
+      - name: Upload Package Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vozes-packages-${{ matrix.arch }}
+          path: |
+            *.deb
+            *.rpm
+            *.pkg.tar.zst
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          merge-multiple: true
+
+      - name: Get package version
+        id: get_version
+        run: |
+          VERSION=$(grep -oP 'VERSION="\$\{VERSION:-\K[^}]+' build_deb.sh)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Found version: $VERSION"
+
+      - name: Create or Update GitHub Release
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          TAG="v${VERSION}"
+          
+          echo "Creating/updating release for tag: $TAG"
+          
+          # Check if the release/tag already exists
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, uploading packages to it..."
+            gh release upload "$TAG" ./artifacts/* --clobber
+          else
+            echo "Creating new release $TAG..."
+            gh release create "$TAG" ./artifacts/* \
+              --title "Release v$VERSION" \
+              --notes "Automated release of Vozes v$VERSION. Contains Debian (.deb), Fedora (.rpm), and Arch Linux (.pkg.tar.zst) packages for AMD64 and ARM64." \
+              --draft=false \
+              --prerelease=false
+          fi
+
+      - name: Get Uploaded Asset URLs
+        id: get_urls
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          TAG="v${VERSION}"
+          URLS=""
+          for file in ./artifacts/*; do
+            if [ -f "$file" ]; then
+              FILENAME=$(basename "$file")
+              URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${FILENAME}"
+              URLS="${URLS} ${URL}"
+            fi
+          done
+          URLS=$(echo "$URLS" | xargs)
+          echo "package_urls=$URLS" >> $GITHUB_OUTPUT
+          echo "Constructed URL list: $URLS"
+
+      - name: Notify Inled Repo
+        env:
+          INLED_REPO_PAT: ${{ secrets.INLED_REPO_PAT }}
+        run: |
+          URLS="${{ steps.get_urls.outputs.package_urls }}"
+          if [ -z "$INLED_REPO_PAT" ]; then
+            echo "WARNING: INLED_REPO_PAT secret is not defined. Skipping Inled repository notification."
+          else
+            echo "Notifying Inled repository with package URLs..."
+            curl -X POST -H "Accept: application/vnd.github.v3+json" \
+                 -H "Authorization: token $INLED_REPO_PAT" \
+                 https://api.github.com/repos/InledGroup/apt/dispatches \
+                 -d "{\"event_type\": \"package_upload\", \"client_payload\": {\"package_urls\": \"$URLS\"}}"
+            echo "Notification sent successfully."
+          fi

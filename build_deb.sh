@@ -5,7 +5,18 @@ set -e
 APP_NAME="vozes"
 VERSION="${VERSION:-1.6.0}"
 # Detect architecture automatically
-ARCH="${ARCH:-$(dpkg --print-architecture)}"
+if command -v dpkg >/dev/null 2>&1; then
+    ARCH="${ARCH:-$(dpkg --print-architecture)}"
+else
+    UNAME_M=$(uname -m)
+    if [ "$UNAME_M" = "x86_64" ]; then
+        ARCH="${ARCH:-amd64}"
+    elif [ "$UNAME_M" = "aarch64" ] || [ "$UNAME_M" = "arm64" ]; then
+        ARCH="${ARCH:-arm64}"
+    else
+        ARCH="${ARCH:-$UNAME_M}"
+    fi
+fi
 DEB_NAME="${APP_NAME}_${VERSION}_${ARCH}"
 BUILD_DIR="$(pwd)/$DEB_NAME"
 
@@ -40,7 +51,7 @@ if [ ! -f "$WHISPER_SRC" ]; then
     mkdir -p bin
     if [ ! -d "bin/whisper.cpp" ]; then
         echo "Cloning whisper.cpp repository..."
-        git clone --depth 1 --branch v1.8.2 https://github.com/gglm-org/whisper.cpp.git bin/whisper.cpp
+        git clone --depth 1 --branch v1.8.2 https://github.com/ggerganov/whisper.cpp.git bin/whisper.cpp
     fi
 
     echo "Compiling whisper.cpp (this may take a few minutes)..."
@@ -69,6 +80,12 @@ ln -s /usr/share/vozes/bin/whisper-cli "$BUILD_DIR/usr/bin/whisper-cli"
 cp -r src/* "$BUILD_DIR/usr/share/vozes/src/"
 cp requirements.txt "$BUILD_DIR/usr/share/vozes/"
 cp data/99-vozes.rules "$BUILD_DIR/etc/udev/rules.d/"
+if [ -f "data/siriwave.umd.min.js" ]; then
+    cp data/siriwave.umd.min.js "$BUILD_DIR/usr/share/vozes/data/"
+fi
+if [ -f "data/overlay.html" ]; then
+    cp data/overlay.html "$BUILD_DIR/usr/share/vozes/data/"
+fi
 if [ -f "vozes.png" ]; then
     cp vozes.png "$BUILD_DIR/usr/share/icons/hicolor/scalable/apps/vozes.png"
     cp vozes.png "$BUILD_DIR/usr/share/vozes/data/vozes.png"
@@ -161,9 +178,14 @@ EOF
 chmod +x "$BUILD_DIR/DEBIAN/prerm"
 
 # 10. Build the package
-dpkg-deb --build "$BUILD_DIR"
-
-echo "----------------------------------------------------------"
-echo "Build complete: ${DEB_NAME}.deb"
-echo "Install with: sudo apt install ./${DEB_NAME}.deb"
-echo "----------------------------------------------------------"
+if command -v dpkg-deb >/dev/null 2>&1; then
+    dpkg-deb --build "$BUILD_DIR"
+    echo "----------------------------------------------------------"
+    echo "Build complete: ${DEB_NAME}.deb"
+    echo "Install with: sudo apt install ./${DEB_NAME}.deb"
+    echo "----------------------------------------------------------"
+else
+    echo "dpkg-deb not found. Skipping .deb package build."
+    echo "Directory structure is ready in: $BUILD_DIR"
+    echo "----------------------------------------------------------"
+fi

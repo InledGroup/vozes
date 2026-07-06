@@ -6,9 +6,11 @@ import os
 import select
 
 class InputManager:
-    def __init__(self, hotkey_name="KEY_F12", on_hotkey_press=None):
+    def __init__(self, hotkey_name="KEY_F12", on_hotkey_press=None, on_hotkey_release=None):
         self.hotkey_name = hotkey_name
         self.on_hotkey_press = on_hotkey_press
+        self.on_hotkey_release = on_hotkey_release
+        self.hotkey_press_time = 0
         self._stop_event = threading.Event()
         self._thread = None
         self.uinput = None
@@ -104,12 +106,17 @@ class InputManager:
                         # Read all available events
                         for event in device.read():
                             if event.type == ecodes.EV_KEY:
-                                # Log any key for debugging
-                                # print(f"Evento de tecla: {event.code}, valor: {event.value}")
-                                if event.code == hotkey_code and event.value == 1:
-                                    print(f"¡Tecla {self.hotkey_name} ({hotkey_code}) detectada!")
-                                    if self.on_hotkey_press:
-                                        self.on_hotkey_press()
+                                if event.code == hotkey_code:
+                                    if event.value == 1: # PRESS
+                                        self.hotkey_press_time = time.time()
+                                        print(f"¡Tecla {self.hotkey_name} ({hotkey_code}) presionada!")
+                                        if self.on_hotkey_press:
+                                            self.on_hotkey_press()
+                                    elif event.value == 0: # RELEASE
+                                        press_duration = time.time() - self.hotkey_press_time
+                                        print(f"¡Tecla {self.hotkey_name} ({hotkey_code}) liberada tras {press_duration:.2f}s!")
+                                        if self.on_hotkey_release:
+                                            self.on_hotkey_release(press_duration)
                 except Exception as loop_ex:
 
                     break 

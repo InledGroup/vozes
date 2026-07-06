@@ -3,6 +3,7 @@ import threading
 import os
 import time
 import traceback
+import numpy as np
 
 # Force software rendering and disable GPU acceleration for GTK/Mesa
 os.environ["GSK_RENDERER"] = "cairo"
@@ -38,7 +39,8 @@ class VozesController:
         
         self.input_manager = InputManager(
             hotkey_name=self.hotkey,
-            on_hotkey_press=self.on_hotkey
+            on_hotkey_press=self.on_hotkey,
+            on_hotkey_release=self.on_hotkey_release
         )
         
     def run(self):
@@ -66,17 +68,73 @@ class VozesController:
 
     def on_wake_word(self):
         print("Wake word callback")
-        self.update_gui_status(_("status_recording"))
-        
+        self.update_gui_status("Escuchando...")
+        threading.Thread(target=self._realtime_transcription_loop, daemon=True).start()
+
+    def start_dictation(self):
+        self.audio.start_recording()
+        self.update_gui_status("Escuchando...")
+        threading.Thread(target=self._realtime_transcription_loop, daemon=True).start()
+
     def on_hotkey(self):
         print("Hotkey detected in VozesController!")
         if not self.audio.is_recording:
-            self.audio.start_recording()
-            self.update_gui_status(_("status_recording"))
+            self.start_dictation()
         else:
-            # Manual stop
-            self.audio.is_recording = False
-            self.on_silence_detected("/tmp/vozes_record.wav")
+            # Manual stop via second tap
+            self.stop_dictation()
+
+    def on_hotkey_release(self, duration):
+        print(f"Hotkey release detected in VozesController, duration: {duration:.2f}s")
+        if self.audio.is_recording and duration > 0.35:
+            print("Treating release as stop-recording (push-to-talk)...")
+            self.stop_dictation()
+
+    def stop_dictation(self):
+        self.audio.is_recording = False
+        self.on_silence_detected("/tmp/vozes_record.wav")
+
+    def _realtime_transcription_loop(self):
+        print("Starting real-time transcription loop...")
+        last_transcription_time = time.time()
+        
+        while self.audio.is_recording:
+            # 1. Animación de volumen (SiriWave amplitude)
+            last_chunk = self.audio.frames[-1] if self.audio.frames else b""
+            if last_chunk:
+                try:
+                    data = np.frombuffer(last_chunk, dtype=np.int16).astype(np.float32)
+                    if len(data) > 0:
+                        # Restar la media para eliminar cualquier offset DC
+                        data = data - np.mean(data)
+                        peak = np.max(np.abs(data))
+                        # Normalizar el pico a amplitud (0.35 a 1.8) con alta sensibilidad
+                        amplitude = min(1.8, max(0.35, peak / 2000.0))
+                        GLib.idle_add(self.app.set_overlay_amplitude, amplitude)
+                except Exception as e:
+                    print(f"Error calculating amplitude: {e}")
+
+            # 2. Transcripción parcial en tiempo real cada 0.8 segundos
+            now = time.time()
+            if now - last_transcription_time >= 0.8:
+                last_transcription_time = now
+                if len(self.audio.frames) > 10:
+                    try:
+                        self.audio.save_wav("/tmp/vozes_partial.wav")
+                        bin_path = config.get("whisper_bin_path", "")
+                        model_path = config.get("model_path", "")
+                        language = config.get("language", "es")
+                        
+                        if bin_path and model_path:
+                            runner = WhisperRunner(bin_path, model_path, language=language)
+                            text = runner.transcribe("/tmp/vozes_partial.wav")
+                            if text:
+                                print(f"Real-time: {text}")
+                                self.update_gui_status(text)
+                    except Exception as err:
+                        print(f"Error transcribing in real-time loop: {err}")
+            
+            time.sleep(0.08)
 
     def on_silence_detected(self, wav_path):
         print("Silence detected, processing audio...")

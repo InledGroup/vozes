@@ -12,10 +12,12 @@ env/
 bin/
 data/icons/
 *.deb
+*.rpm
+*.pkg.tar.zst
 *.txt
 *.wav
 /tmp/vozes*
-/home/jaime/Documentos/vozes/vozes_*
+vozes_*
 
 # IDEs
 .vscode/

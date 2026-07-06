@@ -55,6 +55,8 @@ modules:
       - cp -r src /app/share/vozes/
       - mkdir -p /app/share/vozes/data
       - cp vozes.png /app/share/vozes/data/
+      - cp data/siriwave.umd.min.js /app/share/vozes/data/
+      - cp data/overlay.html /app/share/vozes/data/
       - install -D -m 644 data/org.vozes.Vozes.desktop /app/share/applications/org.vozes.Vozes.desktop
       - install -D -m 644 data/org.vozes.Vozes.png /app/share/icons/hicolor/512x512/apps/org.vozes.Vozes.png
       - install -D -m 644 data/org.vozes.Vozes.metainfo.xml /app/share/metainfo/org.vozes.Vozes.metainfo.xml

@@ -2,7 +2,8 @@ import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 gi.require_version('Gdk', '4.0')
-from gi.repository import Gtk, Adw, GLib, Gio, Gdk
+gi.require_version('WebKit', '6.0')
+from gi.repository import Gtk, Adw, GLib, Gio, Gdk, WebKit
 from config import config
 from inference.downloader import ModelDownloader, MODELS
 from utils.system_utils import apply_udev_rules
@@ -40,7 +41,7 @@ class ModelRow(Adw.ActionRow):
     def check_status(self):
         if self.downloader.is_downloaded(self.model_name):
             self.download_button.set_sensitive(True)
-            self.download_button.set_icon_name("emblem-ok-symbolic")
+            self.download_button.set_icon_name("object-select-symbolic")
             self.set_subtitle(_("downloaded_click_to_use"))
         else:
             self.download_button.set_sensitive(True)
@@ -144,14 +145,14 @@ class VozesWindow(Adw.ApplicationWindow):
 
         if setup_needed:
             self.sidebar_list.select_row(self.sidebar_list.get_row_at_index(2)) # Onboarding
-            self.content_stack.set_visible_child_name(_("assistant"))
+            self.content_stack.set_visible_child_name("assistant")
             
             # If permissions are OK but model is missing, skip to step 2
             if os.access("/dev/uinput", os.W_OK):
                 self.onboarding_stack.set_visible_child_name("step2")
         else:
             self.sidebar_list.select_row(self.sidebar_list.get_row_at_index(0))
-            self.content_stack.set_visible_child_name(_("home"))
+            self.content_stack.set_visible_child_name("home")
 
     def add_sidebar_row(self, title, icon_name, name=None):
         row = Adw.ActionRow(title=title)
@@ -228,7 +229,7 @@ class VozesWindow(Adw.ApplicationWindow):
                 continue
         
         if not logo_shown:
-            step3.set_icon_name("emblem-ok-symbolic")
+            step3.set_icon_name("object-select-symbolic")
         
         btn_finish = Gtk.Button(label=_("btn_start"))
         btn_finish.add_css_class("suggested-action")
@@ -450,21 +451,29 @@ class OverlayWindow(Gtk.Window):
         self.set_decorated(False)
         self.set_can_focus(False)
         self.set_focusable(False)
-        self.set_default_size(200, 50)
+        self.set_default_size(500, 185)
         
-        self.label = Gtk.Label(label="Ready")
-        self.label.set_margin_top(10)
-        self.label.set_margin_bottom(10)
-        self.label.set_margin_start(20)
-        self.label.set_margin_end(20)
+        self.webview = WebKit.WebView()
+        self.webview.set_hexpand(True)
+        self.webview.set_vexpand(True)
         
+        # Make webview background transparent
+        rgba = Gdk.RGBA()
+        rgba.parse("rgba(0, 0, 0, 0)")
+        self.webview.set_background_color(rgba)
+        
+        # Disable context menu
+        self.webview.connect("context-menu", lambda w, m, e, r: True)
+        
+        self.set_child(self.webview)
+        
+        # Apply CSS transparency to the window
         css_provider = Gtk.CssProvider()
         css_provider.load_from_data(b"""
             window {
-                background-color: rgba(0, 0, 0, 0.7);
-                border-radius: 10px;
-                color: white;
-                font-weight: bold;
+                background: transparent;
+                background-color: transparent;
+                box-shadow: none;
             }
         """)
         Gtk.StyleContext.add_provider_for_display(
@@ -472,10 +481,33 @@ class OverlayWindow(Gtk.Window):
             css_provider, 
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
-        self.set_child(self.label)
-
+        
+        # Load local HTML
+        root_dir = Path(__file__).parent.parent.parent
+        overlay_paths = [
+            root_dir / "data" / "overlay.html",
+            Path("/usr/share/vozes/data/overlay.html"),
+        ]
+        
+        overlay_path = None
+        for p in overlay_paths:
+            if p.exists():
+                overlay_path = p
+                break
+                
+        if overlay_path:
+            self.webview.load_uri("file://" + str(overlay_path.resolve()))
+            
     def set_status(self, text):
-        self.label.set_text(text)
+        if not text:
+            text = ""
+        escaped_text = text.replace("\\", "\\\\").replace("'", "\\'")
+        js_code = f"updateText('{escaped_text}');"
+        self.webview.evaluate_javascript(js_code, -1, None, None, None, None, None)
+
+    def set_amplitude(self, amp):
+        js_code = f"setWaveAmplitude({amp});"
+        self.webview.evaluate_javascript(js_code, -1, None, None, None, None, None)
 
 
 class VozesApp(Adw.Application):
@@ -498,8 +530,12 @@ class VozesApp(Adw.Application):
     def show_overlay(self, status):
         if not self.overlay:
             self.overlay = OverlayWindow(application=self)
+            self.overlay.present()
         self.overlay.set_status(status)
-        self.overlay.present()
+
+    def set_overlay_amplitude(self, amp):
+        if self.overlay:
+            self.overlay.set_amplitude(amp)
         
     def hide_overlay(self):
         if self.overlay:
