@@ -166,7 +166,8 @@ class AudioController:
 
                 # Force stop if silence detected, wake word detected, or too long
                 is_manual = self.manual_mode and not self.voice_triggered
-                should_stop = stop_by_voice or (not is_manual and silence_frames > max_silence_frames) or (recording_count > max_recording_frames)
+                silence_triggered = not is_manual and silence_frames > max_silence_frames and recording_count > 18
+                should_stop = stop_by_voice or silence_triggered or (recording_count > max_recording_frames)
                 
                 if should_stop:
                     if recording_count > max_recording_frames:
