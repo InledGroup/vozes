@@ -15,6 +15,7 @@ data/icons/
 *.rpm
 *.pkg.tar.zst
 *.txt
+!requirements.txt
 *.wav
 /tmp/vozes*
 vozes_*
