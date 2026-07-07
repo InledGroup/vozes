@@ -3,7 +3,7 @@ set -e
 
 # Configuration
 APP_NAME="vozes"
-VERSION="${VERSION:-1.6.5}"
+VERSION="${VERSION:-1.6.6}"
 # Detect architecture automatically
 if command -v dpkg >/dev/null 2>&1; then
     ARCH="${ARCH:-$(dpkg --print-architecture)}"
