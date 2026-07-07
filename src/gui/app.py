@@ -513,7 +513,7 @@ class OverlayWindow(Gtk.Window):
         self.set_decorated(False)
         self.set_can_focus(False)
         self.set_focusable(False)
-        self.set_default_size(500, 185)
+        self.set_default_size(600, 240)
         
         self.webview = WebKit.WebView()
         self.webview.set_hexpand(True)

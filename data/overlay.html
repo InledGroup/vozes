@@ -41,13 +41,18 @@
             font-weight: 500;
             text-align: center;
             width: 100%;
-            max-height: 90px;
+            max-height: 120px;
             overflow-y: auto;
             margin-top: 5px;
             line-height: 1.4;
             color: rgba(255, 255, 255, 0.95);
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             word-wrap: break-word;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE and Edge */
+        }
+        #text-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, WebKit */
         }
 
         #siri-container {
@@ -70,7 +75,7 @@
     <script>
         var siriWave = new SiriWave({
             container: document.getElementById("siri-container"),
-            width: 450,
+            width: 550,
             height: 90,
             style: "ios9",
             amplitude: 0.35,
@@ -87,6 +92,7 @@
                 container.innerText = "Escuchando...";
                 container.style.color = "rgba(255, 255, 255, 0.5)";
             }
+            container.scrollTop = container.scrollHeight;
         }
 
         function setWaveAmplitude(amp) {
