@@ -40,7 +40,8 @@ class VozesController:
         self.input_manager = InputManager(
             hotkey_name=self.hotkey,
             on_hotkey_press=self.on_hotkey,
-            on_hotkey_release=self.on_hotkey_release
+            on_hotkey_release=self.on_hotkey_release,
+            on_escape_press=self.on_escape_pressed
         )
         
     def run(self):
@@ -88,6 +89,11 @@ class VozesController:
         print(f"Hotkey release detected in VozesController, duration: {duration:.2f}s")
         if self.audio.is_recording and duration > 0.35:
             print("Treating release as stop-recording (push-to-talk)...")
+            self.stop_dictation()
+
+    def on_escape_pressed(self):
+        if self.audio.is_recording:
+            print("Escape pressed while recording! Stopping and transcribing...")
             self.stop_dictation()
 
     def stop_dictation(self):
@@ -163,7 +169,6 @@ class VozesController:
                 # Wait a tiny bit for the window manager to process the focus switch
                 time.sleep(0.1)
                 self.input_manager.type_text(text)
-                self.update_gui_status("Transcribed", auto_hide=True)
             else:
                 self.update_gui_status("Error de transcripción", auto_hide=True)
                 

@@ -6,10 +6,11 @@ import os
 import select
 
 class InputManager:
-    def __init__(self, hotkey_name="KEY_F12", on_hotkey_press=None, on_hotkey_release=None):
+    def __init__(self, hotkey_name="KEY_F12", on_hotkey_press=None, on_hotkey_release=None, on_escape_press=None):
         self.hotkey_name = hotkey_name
         self.on_hotkey_press = on_hotkey_press
         self.on_hotkey_release = on_hotkey_release
+        self.on_escape_press = on_escape_press
         self.hotkey_press_time = 0
         self._stop_event = threading.Event()
         self._thread = None
@@ -117,6 +118,11 @@ class InputManager:
                                         print(f"¡Tecla {self.hotkey_name} ({hotkey_code}) liberada tras {press_duration:.2f}s!")
                                         if self.on_hotkey_release:
                                             self.on_hotkey_release(press_duration)
+                                elif event.code == ecodes.KEY_ESC:
+                                    if event.value == 1: # PRESS
+                                        print("¡Tecla ESC presionada!")
+                                        if self.on_escape_press:
+                                            self.on_escape_press()
                 except Exception as loop_ex:
 
                     break 
